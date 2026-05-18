@@ -71,6 +71,23 @@ class PaymentLinkIn(BaseModel):
     success_url: str | None = None
 
 
+class WalletTransferIn(BaseModel):
+    recipient_name: str
+    recipient_handle: str
+    amount: float = Field(gt=0)
+    currency: str = "USD"
+    note: str | None = None
+    rail: str = "Wallet"
+
+
+class WalletRequestIn(BaseModel):
+    payer_name: str
+    payer_handle: str
+    amount: float = Field(gt=0)
+    currency: str = "USD"
+    note: str | None = None
+
+
 class DashboardOut(BaseModel):
     total_volume: float
     pending_invoices: int

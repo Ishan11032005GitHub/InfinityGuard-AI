@@ -104,6 +104,24 @@ function demoResponse(path, options = {}) {
     const invoice = demoInvoices.find((item) => item.id === body.invoice_id) || demoInvoices[0];
     return { status: "created", provider: "Stripe", invoice_number: invoice.invoice_number, amount: invoice.amount, currency: invoice.currency, checkout_url: `https://checkout.stripe.com/c/pay/ig_chk_${invoice.id}_${Date.now()}` };
   }
+  if (path === "/api/payment-app/pay" && method === "POST") {
+    const payment = {
+      id: Date.now(),
+      country: "US",
+      rail: body.rail || "Wallet Pay",
+      external_ref: `wallet_pay_${Date.now()}`,
+      invoice_id: "",
+      customer_id: 999,
+      amount: body.amount,
+      currency: body.currency,
+    };
+    localStorage.setItem("ig_demo_payments", JSON.stringify([payment, ...storedPayments()]));
+    return { status: "processing", payment_id: payment.id, external_ref: payment.external_ref, recipient: body.recipient_name, amount: body.amount, currency: body.currency };
+  }
+  if (path === "/api/payment-app/request" && method === "POST") {
+    localStorage.setItem("ig_demo_last_sync", new Date().toISOString());
+    return { status: "requested", request_id: `wallet_req_${Date.now()}`, payer: body.payer_name, amount: body.amount, currency: body.currency };
+  }
   if (path.startsWith("/api/predict/") || path === "/api/compliance/check") return { status: "completed", mode: "offline test", recommendation: "Review high-value, delayed, or volatile-currency items before settlement." };
   if (path === "/api/copilot") return { answer: "Offline test mode: the riskiest invoices are pending high-value invoices in ZAR and EUR, especially INV-2026-1040 and INV-2026-1032.", state_used: { pending_invoices: 3, highest_risk_currency: "ZAR" } };
   throw new Error("Offline test data is not available for this action.");

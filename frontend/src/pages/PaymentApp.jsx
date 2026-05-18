@@ -1,23 +1,36 @@
-import { useEffect, useState } from "react";
-import { CheckCircle2, CreditCard, Link as LinkIcon, RefreshCw, ShieldCheck } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowDownLeft, ArrowUpRight, CheckCircle2, Link as LinkIcon, QrCode, RefreshCw, ScanLine, Search, ShieldCheck } from "lucide-react";
 import { Card, Skeleton } from "../components/Card.jsx";
 import { api } from "../lib/api.js";
+
+const contacts = [
+  { name: "Northstar Robotics", handle: "northstar@pay", currency: "USD", color: "bg-mint" },
+  { name: "Kairo Retail Group", handle: "kairo@pay", currency: "AED", color: "bg-blue-600" },
+  { name: "Sakura Supply KK", handle: "sakura@pay", currency: "JPY", color: "bg-coral" },
+  { name: "Atlas Minerals", handle: "atlas@pay", currency: "ZAR", color: "bg-amber-500" },
+];
 
 const money = (amount, currency = "USD") =>
   new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 0 }).format(amount || 0);
 
 export default function PaymentApp() {
   const [status, setStatus] = useState(null);
+  const [payments, setPayments] = useState([]);
   const [invoices, setInvoices] = useState([]);
+  const [mode, setMode] = useState("pay");
+  const [selected, setSelected] = useState(contacts[0]);
+  const [amount, setAmount] = useState("2500");
+  const [note, setNote] = useState("Invoice settlement");
   const [invoiceId, setInvoiceId] = useState("");
   const [message, setMessage] = useState("");
   const [link, setLink] = useState(null);
   const [loading, setLoading] = useState("");
 
   async function load() {
-    const [statusData, invoiceData] = await Promise.all([api("/api/payment-app/status"), api("/api/invoices")]);
+    const [statusData, invoiceData, paymentData] = await Promise.all([api("/api/payment-app/status"), api("/api/invoices"), api("/api/payments")]);
     setStatus(statusData);
     setInvoices(invoiceData.filter((invoice) => invoice.status === "pending"));
+    setPayments(paymentData.slice(0, 6));
     if (!invoiceId && invoiceData.length) {
       const pending = invoiceData.find((invoice) => invoice.status === "pending") || invoiceData[0];
       setInvoiceId(String(pending.id));
@@ -26,15 +39,17 @@ export default function PaymentApp() {
 
   useEffect(() => { load().catch((err) => setMessage(err.message)); }, []);
 
+  const selectedInvoice = useMemo(() => invoices.find((invoice) => String(invoice.id) === invoiceId), [invoiceId, invoices]);
+
   async function connect() {
     setLoading("connect");
     setMessage("");
     try {
       const result = await api("/api/payment-app/connect", {
         method: "POST",
-        body: JSON.stringify({ provider: "Stripe", account_name: "InfinityGuard Treasury", mode: "test" }),
+        body: JSON.stringify({ provider: "Wallet Pay", account_name: "InfinityGuard Treasury", mode: "test" }),
       });
-      setMessage(`${result.provider} ${result.mode} account connected.`);
+      setMessage(`${result.provider} account connected.`);
       await load();
     } catch (err) {
       setMessage(err.message);
@@ -48,7 +63,27 @@ export default function PaymentApp() {
     setMessage("");
     try {
       const result = await api("/api/payment-app/sync-demo", { method: "POST" });
-      setMessage(`Imported ${result.imported_payments} payment from the payment app.`);
+      setMessage(`Synced ${result.imported_payments} latest wallet payment.`);
+      await load();
+    } catch (err) {
+      setMessage(err.message);
+    } finally {
+      setLoading("");
+    }
+  }
+
+  async function submitWallet(e) {
+    e.preventDefault();
+    setLoading(mode);
+    setMessage("");
+    setLink(null);
+    const endpoint = mode === "pay" ? "/api/payment-app/pay" : "/api/payment-app/request";
+    const payload = mode === "pay"
+      ? { recipient_name: selected.name, recipient_handle: selected.handle, amount: Number(amount), currency: selected.currency, note, rail: "Wallet Pay" }
+      : { payer_name: selected.name, payer_handle: selected.handle, amount: Number(amount), currency: selected.currency, note };
+    try {
+      const result = await api(endpoint, { method: "POST", body: JSON.stringify(payload) });
+      setMessage(mode === "pay" ? `Payment to ${result.recipient} is ${result.status}.` : `Request sent to ${result.payer}.`);
       await load();
     } catch (err) {
       setMessage(err.message);
@@ -67,6 +102,7 @@ export default function PaymentApp() {
         body: JSON.stringify({ invoice_id: Number(invoiceId) }),
       });
       setLink(result);
+      setMessage(`Checkout link ready for ${result.invoice_number}.`);
     } catch (err) {
       setMessage(err.message);
     } finally {
@@ -78,64 +114,143 @@ export default function PaymentApp() {
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-5 xl:grid-cols-[1fr_1.2fr]">
-        <Card>
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="grid h-11 w-11 place-items-center rounded-md bg-mint/10 text-mint"><CreditCard /></div>
+      <div className="grid gap-5 xl:grid-cols-[390px_1fr]">
+        <section className="rounded-lg border border-slate-200 bg-white shadow-soft">
+          <div className="border-b border-slate-200 p-5">
+            <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold">Payment App Connection</h2>
-                <p className="text-sm text-steel">Stripe-compatible ingestion for payments, webhooks, and checkout links.</p>
+                <div className="text-sm font-medium text-mint">Infinity Pay</div>
+                <h2 className="mt-1 text-2xl font-semibold">Wallet</h2>
+              </div>
+              <span className="rounded-full bg-mint/10 px-3 py-1 text-xs font-medium text-mint">{status.connected ? "Connected" : "Setup"}</span>
+            </div>
+            <div className="mt-5 rounded-lg bg-ink p-5 text-white">
+              <div className="text-sm text-white/65">Available balance</div>
+              <div className="mt-2 text-3xl font-semibold">$128,460</div>
+              <div className="mt-4 flex items-center justify-between text-xs text-white/65">
+                <span>Wallet ID: infinity@pay</span>
+                <ShieldCheck size={16} />
               </div>
             </div>
-            <span className="rounded-full bg-mint/10 px-3 py-1 text-xs font-medium text-mint">{status.connected ? "Connected" : "Not connected"}</span>
+            <div className="mt-4 grid grid-cols-4 gap-2">
+              <Action icon={ScanLine} label="Scan" />
+              <Action icon={ArrowUpRight} label="Pay" active={mode === "pay"} onClick={() => setMode("pay")} />
+              <Action icon={ArrowDownLeft} label="Request" active={mode === "request"} onClick={() => setMode("request")} />
+              <Action icon={QrCode} label="QR" />
+            </div>
           </div>
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            <button onClick={connect} disabled={loading === "connect"} className="flex items-center justify-center gap-2 rounded-md bg-ink px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60">
-              <ShieldCheck size={17} /> {loading === "connect" ? "Connecting..." : "Connect provider"}
-            </button>
-            <button onClick={syncDemo} disabled={loading === "sync"} className="flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-ink hover:bg-panel disabled:opacity-60">
-              <RefreshCw size={17} /> {loading === "sync" ? "Syncing..." : "Sync latest payments"}
-            </button>
-          </div>
-          {message && <div className="mt-4 rounded-md bg-panel p-3 text-sm text-steel">{message}</div>}
-        </Card>
 
-        <Card title="Integration Health">
-          <div className="mt-4 grid gap-3 md:grid-cols-4">
-            <Metric label="Provider" value={status.provider} />
-            <Metric label="Health" value={status.sync_health} />
-            <Metric label="Mapped payments" value={status.mapped_payments} />
-            <Metric label="Webhook events" value={status.webhook_events} />
-          </div>
-          <div className="mt-5 rounded-md border border-slate-200 p-4">
-            <div className="flex items-center gap-2 text-sm font-medium"><CheckCircle2 size={17} className="text-mint" /> Production workflow</div>
-            <p className="mt-2 text-sm leading-6 text-steel">Payment app events are normalized into InfinityGuard payments, invoices, transactions, risk signals, alerts, and copilot context.</p>
-          </div>
-        </Card>
+          <form onSubmit={submitWallet} className="p-5">
+            <div className="mb-4 flex rounded-md bg-panel p-1">
+              <button type="button" onClick={() => setMode("pay")} className={`flex-1 rounded px-3 py-2 text-sm font-medium ${mode === "pay" ? "bg-white shadow-sm" : "text-steel"}`}>Pay</button>
+              <button type="button" onClick={() => setMode("request")} className={`flex-1 rounded px-3 py-2 text-sm font-medium ${mode === "request" ? "bg-white shadow-sm" : "text-steel"}`}>Request</button>
+            </div>
+
+            <label className="text-sm font-medium">{mode === "pay" ? "Pay to" : "Request from"}</label>
+            <div className="mt-2 grid grid-cols-4 gap-2">
+              {contacts.map((contact) => (
+                <button key={contact.handle} type="button" onClick={() => setSelected(contact)} className={`rounded-md border p-2 text-center ${selected.handle === contact.handle ? "border-mint bg-mint/5" : "border-slate-200"}`}>
+                  <div className={`mx-auto grid h-9 w-9 place-items-center rounded-full text-sm font-semibold text-white ${contact.color}`}>{contact.name.slice(0, 1)}</div>
+                  <div className="mt-2 truncate text-xs">{contact.name.split(" ")[0]}</div>
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-4 rounded-md border border-slate-200 p-3">
+              <div className="text-sm font-medium">{selected.name}</div>
+              <div className="text-xs text-steel">{selected.handle}</div>
+            </div>
+
+            <label className="mt-4 block text-sm font-medium">Amount</label>
+            <div className="mt-1 flex rounded-md border border-slate-300 focus-within:border-mint">
+              <span className="border-r border-slate-200 px-3 py-2 text-sm text-steel">{selected.currency}</span>
+              <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" className="min-w-0 flex-1 rounded-r-md px-3 py-2 outline-none" />
+            </div>
+
+            <label className="mt-4 block text-sm font-medium">Note</label>
+            <input value={note} onChange={(e) => setNote(e.target.value)} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 outline-none focus:border-mint" />
+
+            <button disabled={loading === mode || !Number(amount)} className="mt-5 flex w-full items-center justify-center gap-2 rounded-md bg-mint px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60">
+              {mode === "pay" ? <ArrowUpRight size={17} /> : <ArrowDownLeft size={17} />}
+              {loading === mode ? "Processing..." : mode === "pay" ? "Pay now" : "Request money"}
+            </button>
+          </form>
+        </section>
+
+        <div className="space-y-5">
+          <Card title="Payment Network">
+            <div className="mt-4 grid gap-3 md:grid-cols-4">
+              <Metric label="Provider" value={status.provider} />
+              <Metric label="Health" value={status.sync_health} />
+              <Metric label="Payments" value={status.mapped_payments} />
+              <Metric label="Events" value={status.webhook_events} />
+            </div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <button onClick={connect} disabled={loading === "connect"} className="flex items-center justify-center gap-2 rounded-md bg-ink px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60">
+                <ShieldCheck size={17} /> {loading === "connect" ? "Connecting..." : "Connect wallet provider"}
+              </button>
+              <button onClick={syncDemo} disabled={loading === "sync"} className="flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-ink hover:bg-panel disabled:opacity-60">
+                <RefreshCw size={17} /> {loading === "sync" ? "Syncing..." : "Sync activity"}
+              </button>
+            </div>
+            {message && <div className="mt-4 rounded-md bg-panel p-3 text-sm text-steel">{message}</div>}
+          </Card>
+
+          <Card title="Recent Activity">
+            <div className="mt-4 space-y-3">
+              {payments.map((payment) => (
+                <div key={payment.id} className="flex items-center justify-between rounded-md border border-slate-200 p-3">
+                  <div className="flex items-center gap-3">
+                    <div className="grid h-9 w-9 place-items-center rounded-full bg-panel text-steel"><Search size={16} /></div>
+                    <div>
+                      <div className="text-sm font-medium">{payment.external_ref}</div>
+                      <div className="text-xs text-steel">{payment.rail} · {payment.country}</div>
+                    </div>
+                  </div>
+                  <div className="text-sm font-semibold">{money(payment.amount, payment.currency || "USD")}</div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
       </div>
 
-      <Card title="Create Payment Link">
+      <Card title="Collect From Invoice">
         <form onSubmit={createLink} className="mt-4 grid gap-3 lg:grid-cols-[1fr_auto]">
           <select value={invoiceId} onChange={(e) => setInvoiceId(e.target.value)} className="rounded-md border border-slate-300 px-3 py-2 outline-none focus:border-mint">
             {invoices.map((invoice) => (
               <option key={invoice.id} value={invoice.id}>
-                {invoice.invoice_number} · {money(invoice.amount, invoice.currency)} · {invoice.currency}
+                {invoice.invoice_number} | {money(invoice.amount, invoice.currency)} | {invoice.currency}
               </option>
             ))}
           </select>
-          <button disabled={!invoiceId || loading === "link"} className="flex items-center justify-center gap-2 rounded-md bg-mint px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60">
-            <LinkIcon size={17} /> {loading === "link" ? "Creating..." : "Create checkout link"}
+          <button disabled={!invoiceId || loading === "link"} className="flex items-center justify-center gap-2 rounded-md bg-ink px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60">
+            <LinkIcon size={17} /> {loading === "link" ? "Creating..." : "Create payment link"}
           </button>
         </form>
+        {selectedInvoice && <div className="mt-3 text-sm text-steel">Ready to collect {money(selectedInvoice.amount, selectedInvoice.currency)} for {selectedInvoice.invoice_number}.</div>}
         {link && (
-          <div className="mt-4 rounded-md border border-slate-200 bg-panel p-4">
-            <div className="text-sm font-medium">{link.invoice_number} checkout link</div>
-            <div className="mt-2 break-all text-sm text-steel">{link.checkout_url}</div>
+          <div className="mt-4 grid gap-4 rounded-md border border-slate-200 bg-panel p-4 md:grid-cols-[120px_1fr]">
+            <div className="grid aspect-square place-items-center rounded-md bg-white">
+              <QrCode size={64} className="text-ink" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 text-sm font-medium"><CheckCircle2 size={17} className="text-mint" /> Payment link ready</div>
+              <div className="mt-2 break-all text-sm text-steel">{link.checkout_url}</div>
+            </div>
           </div>
         )}
       </Card>
     </div>
+  );
+}
+
+function Action({ icon: Icon, label, active, onClick }) {
+  return (
+    <button type="button" onClick={onClick} className={`grid place-items-center gap-1 rounded-md border px-2 py-3 text-xs font-medium ${active ? "border-mint bg-mint/5 text-mint" : "border-slate-200 text-steel hover:bg-panel"}`}>
+      <Icon size={18} />
+      {label}
+    </button>
   );
 }
 

@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from ..auth import current_user, require_roles
 from ..database import SessionLocal, get_db
 from ..models import Customer, EventLog, Invoice, Payment, Role, Transaction, User
-from ..schemas import PaymentAppConnectIn, PaymentLinkIn
+from ..schemas import PaymentAppConnectIn, PaymentLinkIn, WalletRequestIn, WalletTransferIn
 from ..services.events import enqueue_event, process_event
 
 router = APIRouter(prefix="/api/payment-app", tags=["payment-app"])
@@ -95,3 +95,36 @@ def payment_link(payload: PaymentLinkIn, db: Session = Depends(get_db)):
         "checkout_url": f"https://checkout.stripe.com/c/pay/{checkout_id}",
         "event_id": event.id,
     }
+
+
+@router.post("/pay", dependencies=[Depends(require_roles(Role.admin, Role.finance_manager))])
+def pay(payload: WalletTransferIn, background: BackgroundTasks, db: Session = Depends(get_db)):
+    customer = db.query(Customer).filter(Customer.name == payload.recipient_name).first()
+    if not customer:
+        customer = Customer(name=payload.recipient_name, country="US", currency=payload.currency, risk_rating="Medium", kyc_status="Review")
+        db.add(customer)
+        db.flush()
+    external_ref = f"wallet_pay_{int(datetime.utcnow().timestamp())}"
+    payment = Payment(
+        customer_id=customer.id,
+        amount=payload.amount,
+        currency=payload.currency,
+        country=customer.country,
+        status="processing",
+        rail=payload.rail,
+        external_ref=external_ref,
+    )
+    db.add(payment)
+    db.flush()
+    db.add(Transaction(payment_id=payment.id, type="outbound", amount=payload.amount, currency=payload.currency, country=customer.country, counterparty=payload.recipient_name, risk_score=22))
+    event = enqueue_event(db, "wallet.payment.sent", payload.model_dump() | {"payment_id": payment.id, "external_ref": external_ref})
+    background.add_task(process_event_background, event.id)
+    return {"status": "processing", "payment_id": payment.id, "external_ref": external_ref, "recipient": payload.recipient_name, "amount": payload.amount, "currency": payload.currency}
+
+
+@router.post("/request", dependencies=[Depends(require_roles(Role.admin, Role.finance_manager))])
+def request_money(payload: WalletRequestIn, background: BackgroundTasks, db: Session = Depends(get_db)):
+    request_id = f"wallet_req_{int(datetime.utcnow().timestamp())}"
+    event = enqueue_event(db, "wallet.payment.requested", payload.model_dump() | {"request_id": request_id})
+    background.add_task(process_event_background, event.id)
+    return {"status": "requested", "request_id": request_id, "payer": payload.payer_name, "amount": payload.amount, "currency": payload.currency}
