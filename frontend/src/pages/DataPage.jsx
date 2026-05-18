@@ -5,7 +5,12 @@ import { api } from "../lib/api.js";
 export default function DataPage({ type }) {
   const [rows, setRows] = useState(null);
   useEffect(() => {
-    if (type === "settings") setRows([{ setting: "API mode", value: "Mock integrations" }, { setting: "Webhook retries", value: "3 attempts" }, { setting: "Deployment", value: "Docker, Render, Vercel ready" }]);
+    if (type === "settings") setRows([
+      { setting: "API mode", value: "Payment-app ready test mode" },
+      { setting: "Primary payment provider", value: "Stripe-compatible connector" },
+      { setting: "Webhook retries", value: "3 attempts" },
+      { setting: "Deployment", value: "Docker, Render, Vercel ready" },
+    ]);
     else api(`/api/${type}`).then(setRows);
   }, [type]);
   if (!rows) return <Skeleton />;

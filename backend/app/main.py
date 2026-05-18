@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .config import get_settings
 from .database import Base, SessionLocal, engine
-from .routers import auth, intelligence, resources, webhooks
+from .routers import auth, intelligence, payment_app, resources, webhooks
 from .seed import seed
 
 
@@ -34,5 +34,6 @@ def health():
 
 app.include_router(auth.router)
 app.include_router(resources.router)
+app.include_router(payment_app.router)
 app.include_router(webhooks.router)
 app.include_router(intelligence.router)

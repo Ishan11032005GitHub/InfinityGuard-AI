@@ -1,10 +1,11 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Bot, CircleDollarSign, Gauge, Landmark, LineChart, LogOut, Receipt, SearchCheck, Settings, ShieldAlert, Users, WalletCards } from "lucide-react";
+import { Bot, CircleDollarSign, Gauge, Landmark, LineChart, LogOut, PlugZap, Receipt, SearchCheck, Settings, ShieldAlert, Users, WalletCards } from "lucide-react";
 
 const nav = [
   ["Dashboard", "/", Gauge],
   ["Payments", "/payments", CircleDollarSign],
+  ["Payment App", "/payment-app", PlugZap],
   ["Invoices", "/invoices", Receipt],
   ["Customers", "/customers", Users],
   ["FX Intelligence", "/fx", LineChart],
@@ -32,7 +33,7 @@ export default function Layout() {
       <aside className="bg-ink text-white p-5 lg:min-h-screen">
         <div className="mb-8">
           <div className="text-2xl font-semibold">InfinityGuard AI</div>
-          <div className="text-sm text-white/60 mt-1">AI finance operations layer</div>
+          <div className="text-sm text-white/60 mt-1">Payments risk operating system</div>
         </div>
         <nav className="grid gap-1">
           {nav.map(([label, path, Icon]) => (
@@ -44,9 +45,9 @@ export default function Layout() {
         </nav>
       </aside>
       <main className="min-w-0">
-        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white/90 px-5 py-4 backdrop-blur">
+        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white/95 px-5 py-4 backdrop-blur">
           <div>
-            <div className="text-sm text-steel">Cross-border SMB payments intelligence</div>
+            <div className="text-sm text-steel">Connected payments, cash, FX, fraud, and compliance intelligence</div>
             <h1 className="text-xl font-semibold">Finance command center</h1>
           </div>
           <div className="flex items-center gap-3">

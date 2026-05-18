@@ -59,6 +59,18 @@ class PredictionProxyIn(BaseModel):
     payload: dict = {}
 
 
+class PaymentAppConnectIn(BaseModel):
+    provider: str = "Stripe"
+    account_name: str = "Infinity Payments"
+    mode: str = "test"
+
+
+class PaymentLinkIn(BaseModel):
+    invoice_id: int
+    customer_email: EmailStr | None = None
+    success_url: str | None = None
+
+
 class DashboardOut(BaseModel):
     total_volume: float
     pending_invoices: int
