@@ -38,6 +38,10 @@ services:
       JWT_SECRET: local-dev-change-me
       ML_SERVICE_URL: http://ml-service:9000
       CORS_ORIGINS: http://localhost:5173,http://localhost:3000,http://localhost:8080
+      FRONTEND_URL: http://localhost:8080
+      PAYMENT_PROVIDER_MODE: demo
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
     ports:
       - "8000:8000"
     depends_on:

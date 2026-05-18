@@ -11,6 +11,10 @@ class Settings(BaseSettings):
     refresh_token_days: int = 7
     ml_service_url: str = "http://localhost:9000"
     cors_origins: str = "http://localhost:5173"
+    frontend_url: str = "http://localhost:8080"
+    stripe_secret_key: str = ""
+    stripe_webhook_secret: str = ""
+    payment_provider_mode: str = "demo"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

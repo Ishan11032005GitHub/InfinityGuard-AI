@@ -122,7 +122,7 @@ export default function PaymentApp() {
                 <div className="text-sm font-medium text-mint">Infinity Pay</div>
                 <h2 className="mt-1 text-2xl font-semibold">Wallet</h2>
               </div>
-              <span className="rounded-full bg-mint/10 px-3 py-1 text-xs font-medium text-mint">{status.connected ? "Connected" : "Setup"}</span>
+              <span className={`rounded-full px-3 py-1 text-xs font-medium ${status.connected ? "bg-mint/10 text-mint" : "bg-amber-100 text-amber-700"}`}>{status.connected ? "Stripe test" : "Demo mode"}</span>
             </div>
             <div className="mt-5 rounded-lg bg-ink p-5 text-white">
               <div className="text-sm text-white/65">Available balance</div>
@@ -181,7 +181,7 @@ export default function PaymentApp() {
           <Card title="Payment Network">
             <div className="mt-4 grid gap-3 md:grid-cols-4">
               <Metric label="Provider" value={status.provider} />
-              <Metric label="Health" value={status.sync_health} />
+              <Metric label="Mode" value={status.mode} />
               <Metric label="Payments" value={status.mapped_payments} />
               <Metric label="Events" value={status.webhook_events} />
             </div>
@@ -250,6 +250,7 @@ export default function PaymentApp() {
             </div>
             <div>
               <div className="flex items-center gap-2 text-sm font-medium"><CheckCircle2 size={17} className="text-mint" /> Payment link ready</div>
+              <div className="mt-1 text-xs uppercase tracking-wide text-steel">{link.provider} | {link.mode || "demo"}</div>
               <div className="mt-2 break-all text-sm text-steel">{link.checkout_url}</div>
             </div>
           </div>
