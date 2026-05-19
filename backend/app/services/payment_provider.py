@@ -80,6 +80,30 @@ async def create_checkout_link(invoice: Invoice, customer: Customer | None, cust
     )
 
 
+async def retrieve_checkout_session(checkout_id: str) -> dict:
+    settings = get_settings()
+    if not settings.stripe_secret_key:
+        return {
+            "id": checkout_id,
+            "payment_status": "paid",
+            "amount_total": 0,
+            "currency": "usd",
+            "payment_intent": checkout_id,
+            "metadata": {},
+            "demo": True,
+        }
+
+    async with httpx.AsyncClient(timeout=20) as client:
+        response = await client.get(
+            f"https://api.stripe.com/v1/checkout/sessions/{checkout_id}",
+            auth=(settings.stripe_secret_key, ""),
+        )
+    if response.status_code >= 400:
+        detail = response.json().get("error", {}).get("message", "Stripe checkout session lookup failed")
+        raise HTTPException(status_code=502, detail=detail)
+    return response.json()
+
+
 async def verified_stripe_event(request: Request) -> dict:
     settings = get_settings()
     body = await request.body()

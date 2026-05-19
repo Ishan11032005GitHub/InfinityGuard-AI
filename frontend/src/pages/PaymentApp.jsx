@@ -23,6 +23,8 @@ export default function PaymentApp() {
   const [note, setNote] = useState("Invoice settlement");
   const [invoiceId, setInvoiceId] = useState("");
   const [message, setMessage] = useState("");
+  const [linkMessage, setLinkMessage] = useState("");
+  const [verifyStatus, setVerifyStatus] = useState("");
   const [link, setLink] = useState(null);
   const [loading, setLoading] = useState("");
 
@@ -96,15 +98,36 @@ export default function PaymentApp() {
     e.preventDefault();
     setLoading("link");
     setMessage("");
+    setLinkMessage("");
+    setVerifyStatus("");
     try {
       const result = await api("/api/payment-app/payment-link", {
         method: "POST",
         body: JSON.stringify({ invoice_id: Number(invoiceId) }),
       });
       setLink(result);
-      setMessage(`Checkout link ready for ${result.invoice_number}.`);
+      setLinkMessage(`Checkout link ready for ${result.invoice_number}. Open checkout, complete the test payment, then verify it here.`);
     } catch (err) {
       setMessage(err.message);
+    } finally {
+      setLoading("");
+    }
+  }
+
+  async function verifyCheckout() {
+    if (!link?.checkout_id) return;
+    setLoading("verify");
+    setMessage("");
+    setLinkMessage("Checking Stripe payment status...");
+    setVerifyStatus("checking");
+    try {
+      const result = await api(`/api/payment-app/verify-checkout/${link.checkout_id}`, { method: "POST" });
+      setLinkMessage(result.status === "verified" ? `Verified ${result.invoice_number || "checkout"} and recorded ${money(result.amount, result.currency)}.` : result.message);
+      setVerifyStatus(result.status === "verified" ? "verified" : "unpaid");
+      await load();
+    } catch (err) {
+      setLinkMessage(err.message);
+      setVerifyStatus("error");
     } finally {
       setLoading("");
     }
@@ -252,6 +275,15 @@ export default function PaymentApp() {
               <div className="flex items-center gap-2 text-sm font-medium"><CheckCircle2 size={17} className="text-mint" /> Payment link ready</div>
               <div className="mt-1 text-xs uppercase tracking-wide text-steel">{link.provider} | {link.mode || "demo"}</div>
               <div className="mt-2 break-all text-sm text-steel">{link.checkout_url}</div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <a href={link.checkout_url} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center rounded-md bg-mint px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">
+                  Open checkout
+                </a>
+                <button type="button" onClick={verifyCheckout} disabled={loading === "verify" || !link.checkout_id} className={`inline-flex items-center justify-center rounded-md border px-4 py-2 text-sm font-medium disabled:opacity-60 ${verifyStatus === "verified" ? "border-mint bg-mint/10 text-mint" : verifyStatus === "unpaid" || verifyStatus === "error" ? "border-coral bg-coral/10 text-coral" : "border-slate-300 bg-white text-ink hover:bg-panel"}`}>
+                  {verifyStatus === "checking" ? "Checking..." : verifyStatus === "verified" ? "Verified" : verifyStatus === "unpaid" ? "Not paid yet" : verifyStatus === "error" ? "Verification failed" : "Verify Stripe payment"}
+                </button>
+              </div>
+              {linkMessage && <div className="mt-3 rounded-md bg-white p-3 text-sm text-steel">{linkMessage}</div>}
             </div>
           </div>
         )}
