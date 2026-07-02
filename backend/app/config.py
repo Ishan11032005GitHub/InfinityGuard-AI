@@ -30,12 +30,17 @@ class Settings(BaseSettings):
     compliance_provider_api_key: str = ""
     compliance_provider_timeout_seconds: float = 10
     max_collection_amount: float = 100000
+    email_provider: str = "smtp"
     smtp_host: str = ""
     smtp_port: int = 587
     smtp_username: str = ""
     smtp_password: str = ""
     smtp_from_email: str = ""
     smtp_use_tls: bool = True
+    gmail_client_id: str = ""
+    gmail_client_secret: str = ""
+    gmail_refresh_token: str = ""
+    gmail_from_email: str = ""
     database_backups_configured: bool = False
     monitoring_configured: bool = False
     legal_review_completed: bool = False

@@ -26,6 +26,25 @@ def _https(url: str) -> bool:
     return urlparse(url).scheme == "https"
 
 
+def _email_configured(settings: Settings) -> bool:
+    provider = settings.email_provider.strip().lower()
+    if provider == "gmail_api":
+        return bool(
+            settings.gmail_client_id
+            and settings.gmail_client_secret
+            and settings.gmail_refresh_token
+            and settings.gmail_from_email
+        )
+    return bool(settings.smtp_host and settings.smtp_from_email)
+
+
+def _email_detail(settings: Settings) -> str:
+    provider = settings.email_provider.strip().lower()
+    if provider == "gmail_api":
+        return "Gmail API recovery email configured" if _email_configured(settings) else "Gmail API client ID, client secret, refresh token, and from email are required"
+    return "SMTP recovery email configured" if _email_configured(settings) else "SMTP is required for non-demo accounts"
+
+
 def deployment_readiness(settings: Settings, engine) -> dict:
     compliance_provider = settings.compliance_provider.strip().lower()
     checks = [
@@ -55,8 +74,8 @@ def deployment_readiness(settings: Settings, engine) -> dict:
         ),
         ReadinessCheck(
             "password_reset",
-            settings.demo_only or bool(settings.smtp_host and settings.smtp_from_email),
-            "Recovery email configured" if settings.smtp_host and settings.smtp_from_email else "SMTP is required for non-demo accounts",
+            settings.demo_only or _email_configured(settings),
+            _email_detail(settings),
             "production",
         ),
         ReadinessCheck(
