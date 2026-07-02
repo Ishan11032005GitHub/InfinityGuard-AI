@@ -15,6 +15,7 @@ function readPreferences() {
     weeklyDigest: false,
     currency: "USD",
     timezone: "Asia/Kolkata",
+    oneTimePaymentLimit: 5000,
   };
   const key = `ig_preferences:${accountStorageKey()}`;
   try {
@@ -390,6 +391,22 @@ export default function Settings() {
                   <option value="Europe/London">London</option>
                   <option value="America/New_York">New York</option>
                 </select>
+              </label>
+              <label className="text-sm font-medium sm:col-span-2">
+                One-time payment limit
+                <div className="mt-1.5 grid grid-cols-[92px_1fr]">
+                  <span className="rounded-l-md border border-r-0 border-slate-300 bg-slate-50 px-3 py-2.5 text-sm text-steel">{preferences.currency || "USD"}</span>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={preferences.oneTimePaymentLimit}
+                    onChange={(event) => setPreferences({ ...preferences, oneTimePaymentLimit: Number(event.target.value) || 1 })}
+                    className="w-full rounded-r-md border border-slate-300 bg-white px-3 py-2.5 outline-none focus:border-emerald-500"
+                    placeholder="5000"
+                  />
+                </div>
+                <span className="mt-1 block text-xs font-normal text-steel">LedgerOps blocks single QuickLinks and outgoing payments above this amount for your account.</span>
               </label>
             </div>
             <button disabled={busy === "preferences"} className="mt-5 rounded-md bg-ink px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60">{busy === "preferences" ? "Saving..." : "Save preferences"}</button>

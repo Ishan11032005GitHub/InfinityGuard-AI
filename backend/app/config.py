@@ -46,8 +46,10 @@ class Settings(BaseSettings):
     legal_review_completed: bool = False
     security_review_completed: bool = False
     restricted_pilot_enabled: bool = False
+    pilot_allowed_user_emails: str = ""
+    pilot_allowed_payer_emails: str = ""
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8-sig")
 
     @property
     def origins(self) -> list[str]:
@@ -56,6 +58,14 @@ class Settings(BaseSettings):
     @property
     def active_gemini_key(self) -> str:
         return self.gemini_api_key or self.google_api_key
+
+    @property
+    def pilot_user_email_set(self) -> set[str]:
+        return {email.strip().lower() for email in self.pilot_allowed_user_emails.split(",") if email.strip()}
+
+    @property
+    def pilot_payer_email_set(self) -> set[str]:
+        return {email.strip().lower() for email in self.pilot_allowed_payer_emails.split(",") if email.strip()}
 
 
 @lru_cache

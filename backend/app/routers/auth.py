@@ -335,6 +335,7 @@ def preferences_out(preferences: AccountPreference):
         "weeklyDigest": preferences.weekly_digest,
         "currency": preferences.currency,
         "timezone": preferences.timezone,
+        "oneTimePaymentLimit": preferences.one_time_payment_limit,
     }
 
 
@@ -360,6 +361,7 @@ def update_preferences(payload: AccountPreferencesIn, db: Session = Depends(get_
     preferences.weekly_digest = payload.weeklyDigest
     preferences.currency = payload.currency
     preferences.timezone = payload.timezone
+    preferences.one_time_payment_limit = payload.oneTimePaymentLimit
     db.commit()
     db.refresh(preferences)
     return preferences_out(preferences)

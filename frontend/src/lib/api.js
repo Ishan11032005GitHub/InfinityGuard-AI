@@ -129,7 +129,7 @@ function demoResponse(path, options = {}) {
     };
   }
   if (path === "/api/auth/reset-password" && method === "POST") return { status: "updated", message: "Password reset complete. You can now sign in." };
-  if (path === "/api/auth/preferences" && method === "GET") return JSON.parse(localStorage.getItem(scopedKey("ig_preferences", activeUser)) || JSON.stringify({ paymentAlerts: true, riskAlerts: true, weeklyDigest: false, currency: "USD", timezone: "Asia/Kolkata" }));
+  if (path === "/api/auth/preferences" && method === "GET") return JSON.parse(localStorage.getItem(scopedKey("ig_preferences", activeUser)) || JSON.stringify({ paymentAlerts: true, riskAlerts: true, weeklyDigest: false, currency: "USD", timezone: "Asia/Kolkata", oneTimePaymentLimit: 5000 }));
   if (path === "/api/auth/preferences" && method === "PATCH") {
     localStorage.setItem(scopedKey("ig_preferences", activeUser), JSON.stringify(body));
     return body;

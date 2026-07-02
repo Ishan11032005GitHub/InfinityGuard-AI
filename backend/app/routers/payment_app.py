@@ -7,7 +7,7 @@ from ..account_scope import account_user_ids
 from ..auth import current_user, require_roles
 from ..config import get_settings
 from ..database import SessionLocal, get_db
-from ..models import Alert, AuditLog, Customer, DemoMessage, DemoWallet, EventLog, Invoice, Payment, PaymentMethod, QuickLink, ReconciliationRun, Refund, Role, Transaction, User
+from ..models import AccountPreference, Alert, AuditLog, Customer, DemoMessage, DemoWallet, EventLog, Invoice, Payment, PaymentMethod, QuickLink, ReconciliationRun, Refund, Role, Transaction, User
 from ..schemas import DemoChatIn, DemoQuickLinkPayIn, PaymentAppConnectIn, PaymentLinkIn, PaymentMethodIn, QuickLinkCreateIn, RefundCreateIn, WalletRequestIn, WalletTransferIn
 from ..services.audit import record_audit
 from ..services.compliance_gateway import preflight_collection
@@ -74,6 +74,24 @@ def payment_method_out(method: PaymentMethod):
         "expiry_year": method.expiry_year,
         "is_default": method.is_default,
     }
+
+
+def one_time_limit_for(db: Session, user: User) -> float:
+    preferences = db.query(AccountPreference).filter(AccountPreference.user_id == user.id).first()
+    account_limit = preferences.one_time_payment_limit if preferences else 5000
+    platform_cap = get_settings().max_collection_amount
+    if platform_cap and platform_cap > 0:
+        return min(account_limit, platform_cap)
+    return account_limit
+
+
+def enforce_one_time_limit(db: Session, user: User, amount: float, currency: str) -> None:
+    limit = one_time_limit_for(db, user)
+    if amount > limit:
+        raise HTTPException(
+            status_code=409,
+            detail=f"This payment exceeds your one-time {currency.upper()} limit of {limit:,.2f}. Update your account limit in Settings.",
+        )
 
 
 def quicklink_out(link: QuickLink) -> dict:
@@ -580,13 +598,15 @@ def pay_demo_quicklink(public_id: str, payload: DemoQuickLinkPayIn, db: Session 
     return public_quicklink_out(link) | {"message": "Demo card payment completed"}
 
 
-@router.post("/quicklinks", dependencies=[Depends(require_roles(Role.admin, Role.finance_manager))])
+@router.post("/quicklinks")
 async def create_quicklink(payload: QuickLinkCreateIn, db: Session = Depends(get_db), user: User = Depends(current_user)):
-    live_operation = not (is_demo_user(user) or get_settings().demo_only)
+    settings = get_settings()
+    live_operation = not (is_demo_user(user) or settings.demo_only)
     if live_operation and not user.email_verified:
         raise HTTPException(status_code=403, detail="Verify your email before creating a live payment link")
     if live_operation and not user.mfa_enabled:
         raise HTTPException(status_code=403, detail="Enable authenticator MFA before creating a live payment link")
+    enforce_one_time_limit(db, user, payload.amount, payload.currency)
     invoice = None
     if payload.invoice_id:
         invoice = db.query(Invoice).filter(Invoice.id == payload.invoice_id, Invoice.user_id.in_(account_user_ids(db, user))).first()
@@ -605,7 +625,7 @@ async def create_quicklink(payload: QuickLinkCreateIn, db: Session = Depends(get
         payer_name=payload.payer_name,
         payer_email=str(payload.payer_email) if payload.payer_email else None,
         payer_country=payload.payer_country,
-        demo=is_demo_user(user) or get_settings().demo_only,
+        demo=is_demo_user(user) or settings.demo_only,
     )
     link = QuickLink(
         user_id=invoice.user_id if invoice and invoice.user_id else user.id,
@@ -1132,8 +1152,9 @@ async def verify_checkout(checkout_id: str, db: Session = Depends(get_db), user:
     }
 
 
-@router.post("/pay", dependencies=[Depends(require_roles(Role.admin, Role.finance_manager))])
+@router.post("/pay")
 async def pay(payload: WalletTransferIn, background: BackgroundTasks, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    enforce_one_time_limit(db, user, payload.amount, payload.currency)
     prior = db.query(EventLog).filter(EventLog.user_id == user.id, EventLog.event_type == "wallet.payment.sent").order_by(EventLog.created_at.desc()).limit(100).all()
     prior_event = next((event for event in prior if event.payload.get("idempotency_key") == payload.idempotency_key), None)
     if prior_event:

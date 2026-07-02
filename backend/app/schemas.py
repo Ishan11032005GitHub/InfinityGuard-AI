@@ -80,6 +80,7 @@ class AccountPreferencesIn(BaseModel):
     weeklyDigest: bool = False
     currency: str = Field(default="USD", min_length=3, max_length=8)
     timezone: str = Field(default="Asia/Kolkata", max_length=80)
+    oneTimePaymentLimit: float = Field(default=5000, gt=0, le=1000000000)
 
     @field_validator("currency")
     @classmethod

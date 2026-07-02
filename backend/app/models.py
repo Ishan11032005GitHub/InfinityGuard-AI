@@ -37,6 +37,7 @@ class AccountPreference(Base):
     weekly_digest: Mapped[bool] = mapped_column(Boolean, default=False)
     currency: Mapped[str] = mapped_column(String(8), default="USD")
     timezone: Mapped[str] = mapped_column(String(80), default="Asia/Kolkata")
+    one_time_payment_limit: Mapped[float] = mapped_column(Float, default=5000)
 
 
 class PasswordResetToken(Base):
