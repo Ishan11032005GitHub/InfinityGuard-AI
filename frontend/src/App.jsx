@@ -13,6 +13,7 @@ const QuickLinkCheckout = lazy(() => import("./pages/QuickLinkCheckout.jsx"));
 const Settings = lazy(() => import("./pages/Settings.jsx"));
 const CountryCodes = lazy(() => import("./pages/CountryCodes.jsx"));
 const ProductOps = lazy(() => import("./pages/ProductOps.jsx"));
+const Copilot = lazy(() => import("./pages/Copilot.jsx"));
 
 function Protected({ children }) {
   return localStorage.getItem("ig_access_token") ? children : <Navigate to="/login" replace />;
@@ -41,6 +42,7 @@ export default function App() {
           <Route path="/fraud" element={<IntelligencePage mode="fraud" />} />
           <Route path="/cash" element={<IntelligencePage mode="cash" />} />
           <Route path="/compliance" element={<IntelligencePage mode="compliance" />} />
+          <Route path="/copilot" element={<Copilot />} />
           <Route path="/action-center" element={<ProductOps mode="action-center" />} />
           <Route path="/payment-timeline" element={<ProductOps mode="payment-timeline" />} />
           <Route path="/receipt-center" element={<ProductOps mode="receipt-center" />} />

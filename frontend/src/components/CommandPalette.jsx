@@ -23,6 +23,7 @@ const commands = [
   ["Fraud Detection", "/fraud", "Anomaly and payment review"],
   ["Cash Forecast", "/cash", "Runway and cash projection"],
   ["Compliance", "/compliance", "KYC and settlement review"],
+  ["AI Finance Copilot", "/copilot", "Account-grounded answers about cash, invoices, risk, and FX"],
   ["Demo Story Mode", "/demo-story", "Guided product presentation flow"],
   ["Settings", "/settings", "Profile, security, team access"],
 ];

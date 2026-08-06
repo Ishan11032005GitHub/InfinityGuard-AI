@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Bell, CircleDollarSign, FileText, Flag, Gauge, History, LineChart, Link2, LockKeyhole, LogOut, PlugZap, Receipt, RefreshCw, SearchCheck, Settings, ShieldAlert, Users, WalletCards } from "lucide-react";
+import { Bell, Bot, CircleDollarSign, FileText, Flag, Gauge, History, LineChart, Link2, LockKeyhole, LogOut, PlugZap, Receipt, RefreshCw, SearchCheck, Settings, ShieldAlert, Users, WalletCards } from "lucide-react";
 import { accountCommandTitle, accountSubtitle, readStoredUser } from "../lib/account.js";
 import CommandPalette from "./CommandPalette.jsx";
 import FloatingCopilot from "./FloatingCopilot.jsx";
@@ -21,6 +21,7 @@ const nav = [
   ["Fraud Detection", "/fraud", ShieldAlert],
   ["Cash Forecast", "/cash", WalletCards],
   ["Compliance", "/compliance", SearchCheck],
+  ["AI Copilot", "/copilot", Bot, () => import("../pages/Copilot.jsx")],
   ["Reconcile", "/reconciliation", RefreshCw],
   ["Audit Log", "/audit-log", LockKeyhole],
   ["Settings", "/settings", Settings],
