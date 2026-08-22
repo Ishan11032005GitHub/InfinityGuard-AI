@@ -9,7 +9,7 @@
     "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
-    "framer-motion": "^11.15.0",
+    "framer-motion": "^12.42.0",
     "i18n-iso-countries": "^7.14.0",
     "lucide-react": "^0.468.0",
     "react": "^18.3.1",
